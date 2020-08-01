@@ -18,7 +18,7 @@ namespace Snek
         {
             // Place snakes in a basket...
             Basket = new List<ISnek>();
-            Basket.Add(new SnekGarter(configPath: "garter.snek"));
+            Basket.Add(new GarterSnek(configPath: "garter.snek"));
 
             // ...now let the snakes do snake things!
             foreach (ISnek s in Basket)
