@@ -19,11 +19,15 @@ namespace Snek.Utils
         public string Path { get; private set; }
         public bool Exists => File.Exists(Path);
 
-        private string[] reserved = { "=", ";", "\n" };
+        private string[] reserved = { "=", ";", "\n", "\r" };
         
         public PseudoINI(string path)
         {
             Path = path;
+
+            // Attempt to resolve path in parent if it doesn't exist. Only try 10 times.
+            for(int i = 0; i < 10 && !Exists; ++i)
+                Path = "../" + Path;
         }
 
         // Sets an item if it's present, add if it's not.
@@ -81,10 +85,14 @@ namespace Snek.Utils
         public string ReadItem(string key)
         {
             List<KeyValuePair<string, string>> snap = Snapshot();
-            foreach(KeyValuePair<string, string> pair in snap)
+
+            if (snap != null)
             {
-                if (KeyEquals(pair.Key, key))
-                    return pair.Value;
+                foreach (KeyValuePair<string, string> pair in snap)
+                {
+                    if (KeyEquals(pair.Key, key))
+                        return pair.Value;
+                }
             }
 
             return null;
