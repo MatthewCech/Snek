@@ -1,10 +1,12 @@
 ﻿using Discord;
 using Discord.WebSocket;
 using Microsoft.VisualBasic;
+using MoonSharp.Interpreter;
 using Snek.Utils;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Reflection.Metadata;
 using System.Text;
 using System.Threading;
@@ -77,7 +79,7 @@ namespace Snek.Sneks
 
             // Look at our scales - add new ones, and update existing, and remove old.
             // Go from back to front to avoid issues.
-            for (int i = scales.Count; i > 0; i--)
+            for (int i = scales.Count - 1; i > 0; i--)
             {
                 // If it doesn't exist any more, remove it.
                 if (!scales[i].Exists)
@@ -132,6 +134,9 @@ namespace Snek.Sneks
             if (message.StartsWith(indicator))
             {
                 const string scaleKey = "scale";
+                const string scaleKeyAlt = "scales";
+
+                // Parse command and argument(s).
                 string command = message.Split(null)[0].Trim().ToLowerInvariant().Substring(1);
                 string args = "";
                 if (message.Length - command.Length > 0)
@@ -140,10 +145,11 @@ namespace Snek.Sneks
                 string res = null;
 
                 // See if we're calling 'scale' to make a new command. If not, try and run another command.
-                if (command.Equals(scaleKey))
+                if (command.Equals(scaleKey) || command.Equals(scaleKeyAlt))
                 {
+                    // parse subcommand and subargument(s)
                     string subCommand = args.Split(null)[0].Trim().ToLowerInvariant();
-                    string subArgs = null;
+                    string subArgs = "";
                     if (args.Length - subCommand.Length > 0)
                          subArgs = args.Substring(subCommand.Length + 1).Trim();
 
@@ -171,29 +177,131 @@ namespace Snek.Sneks
         {
             switch (subCommand)
             {
+                case "help":
+                case "guide":
+                case "how":
+                case "howto":
                 case "new":
+                case "?":
                     {
                         string howTo = "To add a new scale, you'll want to make sure you use the `" + indicator + "scale add <name>` command.\n";
                         howTo += "Here's some boilerplate for adding a new scale that you can copy and paste!\n";
-                        howTo += "` " + indicator + "scale add DemoScale <code block below goes here>`\n";
-                        howTo += "```";
+                        howTo += "` " + indicator + "scale add Poke`\n";
+                        howTo += "```lua\n";
+                        howTo += "-- Since this is named Poke, 'poke' is the required command word. It's case insensitive.\n";
                         howTo += "function plugin(msg)\n";
-                        howTo += "\tif msg == boop then\n";
-                        howTo += "\t\treturn \"hiss\"\n";
+                        howTo += "\tif msg == \"snoot\" then\n";
+                        howTo += "\t\treturn \"blep\";\n";
+                        howTo += "\telse\n";
+                        howTo += "\t\treturn \"hiss\";\n";
                         howTo += "\tend\n";
                         howTo += "end\n";
                         howTo += "```\n";
-
 
                         return howTo;
                     }
                     break;
 
+                case "cat":
+                case "type":
+                case "print":
+                case "dump":
+                    {
+                        if (args != null || args.Length > 0)
+                        {
+                            if (!args.Contains(".lua"))
+                                args = args.Trim() + ".lua";
 
-                    // Adds scale by case insensitve name, with behavior as follows.
+                            string path = Path.Combine(scalesPath, args);
+                            if (File.Exists(path))
+                            {
+                                string toDump = "```lua\n";
+                                toDump += File.ReadAllText(path);
+                                toDump += "```";
+                                return toDump;
+                            }
+                            else
+                            {
+                                return "I couldn't find a scale with the name `" + args + "`!";
+                            }
+                        }
+                        else
+                        {
+                            return "I can't print out nothing! Try specifying a scale by name, like `" + indicator + "scale " + subCommand + " <name>`!";
+                        }
+                    }
+                    break;
+
+                // Adds scale by case insensitve name, with behavior as follows.
                 case "add":
                     {
-                        return args;
+                        if (args == null)
+                            return "Nothing to add! Try `" + indicator + "scale guide`!";
+
+                        int start = args.IndexOf("`");
+                        string name = args.Substring(0, start).Trim().ToLowerInvariant();
+                        string body = args.Substring(start).Trim();
+
+                        // Figure out how many leading characters to ignore.
+                        int offsetForward = 0;
+                        foreach (char c in body)
+                        {
+                            if (c != '`' && !string.IsNullOrWhiteSpace("" + c))
+                            {
+                                if (body.Substring(offsetForward).ToLowerInvariant().StartsWith("lua"))
+                                {
+                                    offsetForward += 3;
+                                    continue;
+                                }
+
+                                break;
+                            }
+
+                            ++offsetForward;
+                        }
+
+                        // If the user was using syntax highlighting in the markdown, ignore that lua keyword
+                        
+
+                        int offsetBack = 0;
+                        foreach(char c in body.Reverse())
+                        {
+                            if (c != '`' && !string.IsNullOrWhiteSpace("" + c))
+                                break;
+
+                            ++offsetBack;
+                        }
+
+                        body = body.Substring(offsetForward, body.Length - (offsetBack + offsetForward));
+
+                        Script envTemp = new Script();
+                        try
+                        {
+                            envTemp.DoString(body);
+                        }
+                        catch(Exception e)
+                        {
+                            return "Whoops, looks like there was an error in that code - I can't add that as a scale until it compiles!\n`" + e.Message + "`";
+                        }
+
+                        try
+                        {
+                            string toAppend = ".lua";
+                            if (name.Contains(".lua"))
+                                toAppend = "";
+
+                            string path = Path.Combine(scalesPath, name.Trim() + toAppend);
+                            File.WriteAllText(path, body);
+                            Scale scale = new Scale(path);
+                            scales.Add(scale);
+
+                            return "A scale named `" + name + "` was created! Snek currently has " + scales.Count + (scales.Count > 1 ? " scales" : " scale") + "!";
+                        }
+                        catch(Exception e)
+                        {
+                            return "Hmm, I couldn't make that into a scale...\n" + e.Message;
+                        }
+
                     }
                     break;
 
@@ -203,10 +311,29 @@ namespace Snek.Sneks
                     {
                         if(args != null && args.Length > 0)
                         {
+                            string name = args.ToLowerInvariant().Trim();
+                            if (!args.Contains(".lua"))
+                                args = name + ".lua";
+
                             string path = Path.Combine(scalesPath, args);
                             if (File.Exists(path))
                             {
-                                File.Delete(path);
+                                bool removed = false;
+                                for(int i = scales.Count - 1; i > 0; --i)
+                                {
+                                    if(scales[i].Name.ToLowerInvariant().Trim().Equals(name))
+                                    {
+                                        scales.RemoveAt(i);
+                                        File.Delete(path);
+                                        removed = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!removed)
+                                    return "Hmm, I found something at " + path + ", but it doesn't seem to be a scale so I won't delete it.";
+
+                                return "I deleted my scale at `" + path + "`!\nCustom scales left: " + scales.Count;
                             }
                             else
                             {
@@ -228,7 +355,7 @@ namespace Snek.Sneks
 
                         if (scales.Count > 0)
                         {
-                            comp += "Found " + scales.Count + " Scales: ```diff";
+                            comp += "Found " + scales.Count + (scales.Count > 1 ? " scales" : " scale") + ": ```diff";
                             foreach (Scale s in scales)
                             {
                                 comp += "\n+ " + s.Name;
