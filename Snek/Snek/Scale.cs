@@ -11,28 +11,37 @@ namespace Snek
     {
         public string Name => Path.GetFileNameWithoutExtension(path).Trim();
         public bool Exists => File.Exists(path);
-        public bool HasChanged => File.GetLastWriteTime(path) != lastRunTime; 
 
         private string path;
         private Script env;
-        private DateTime lastRunTime;
+        private int lastHash;
+
+
         public Scale(string path)
         {
             this.path = path;
-            Refresh();
+            VerifyRefreshed();
         }
 
-        public void Refresh()
+        public void VerifyRefreshed()
         {
-            this.env = new Script();
             string raw = File.ReadAllText(path);
-            env.DoString(raw);
-            lastRunTime = File.GetLastWriteTime(path);
+            int curhash = raw.GetHashCode();
+
+            if (lastHash != curhash)
+            {
+                this.env = new Script();
+                env.DoString(raw);
+                lastHash = curhash;
+            }
         }
 
-        public string DoPlugin(string message)
+        //  - isIndicated : Is this plugin being called explicitly? 
+        //  - message   : the arguments sent with the command.
+        public string DoPlugin(bool isIndicated, string message)
         {
-            DynValue res = env.Call(env.Globals["plugin"], message);
+            // 'isIndexed' is referred to as 'prefixed' in lua examples.
+            DynValue res = env.Call(env.Globals["plugin"], isIndicated, message);
 
             if (res.IsNil())
                 return null;
