@@ -208,9 +208,9 @@ namespace Snek.Sneks
                         howTo += "function plugin(isPrefixed, args)\n";
                         howTo += "  if isPrefixed then\n";
                         howTo += "    if args == \"snoot\" then\n";
-                        howTo += "      return \"blep\";\n";
+                        howTo += "      return \"*blep*\";\n";
                         howTo += "    else\n";
-                        howTo += "      return \"hiss\";\n";
+                        howTo += "      return \"*hiss*\";\n";
                         howTo += "    end\n";
                         howTo += "  end\n";
                         howTo += "end\n";
