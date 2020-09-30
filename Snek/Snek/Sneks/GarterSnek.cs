@@ -41,8 +41,10 @@ namespace Snek.Sneks
             this.Name = config.ReadItem("name");
             this.token = config.ReadItem("token");
             this.indicator = config.ReadItem("indicator");
+            this.scalesPath = config.ReadItem("scalePath");
 
-            scalesPath = "scales/";
+            Console.WriteLine($"Path for scales: {scalesPath}");
+            
             if(!Directory.Exists(scalesPath))
                 Directory.CreateDirectory(scalesPath);
         }
@@ -148,6 +150,9 @@ namespace Snek.Sneks
             {
                 const string scaleKey = "scale";
                 const string scaleKeyAlt = "scales";
+
+                // Log out some debug info
+                Console.WriteLine($"Message: {message}");
 
                 // See if we're calling 'scale' to make a new command. If not, try and run another command.
                 if (command.Equals(scaleKey) || command.Equals(scaleKeyAlt))
