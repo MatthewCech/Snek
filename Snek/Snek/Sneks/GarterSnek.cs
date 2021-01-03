@@ -204,7 +204,8 @@ namespace Snek.Sneks
                 case "new":
                 case "?":
                     {
-                        string howTo = "To add a new scale, you'll want to make sure you use the `" + indicator + "scale add <name>` command.\n";
+                        string howTo = $"For a list of all commands, use `${indicator}scale`\n\n";
+                        howTo += "To add a new scale, you'll want to make sure you use the `" + indicator + "scale add <name>` command.\n";
                         howTo += "Here's some boilerplate for adding a new scale that you can copy and paste!\n\n";
                         howTo += "`" + indicator + "scale add Poke`\n";
                         howTo += "```lua\n";
@@ -385,11 +386,25 @@ namespace Snek.Sneks
                         return comp;
                     }
 
+                case "shutdown":
+                    {
+                        System.Environment.Exit(0);
+                        return "Putting scales away and shutting down";
+                    }
 
                 // Let people know how to interact with snek
                 default:
                     {
-                        return "To look at my scales, try `" + indicator + "scale list`!";
+                        string commandList = "";
+                        commandList += $"- Get detialed examples with `${indicator}scale help`\n";
+                        commandList += $"- To look at my scales, try `${indicator}scale list`\n";
+                        commandList += $"- To add a scale, try `${indicator}scale add <scale name> <lua>`\n";
+                        commandList += $"- To remove a scale, try `${indicator}scale add <scale name>`\n";
+                        commandList += $"- To update a scale, try `${indicator}scale update <scale name> <lua>`\n";
+                        commandList += $"- To view a scale, try `${indicator}scale type <scale name>`\n";
+                        commandList += $"- You can stop me with `${indicator}scale shutdown`\n";
+
+                        return commandList;
                     }
             }
         }
