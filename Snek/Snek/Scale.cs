@@ -38,7 +38,7 @@ namespace Snek
 
         //  - isIndicated : Is this plugin being called explicitly? 
         //  - message   : the arguments sent with the command.
-        public string DoPlugin(bool isIndicated, string message)
+        public List<string> DoPlugin(bool isIndicated, string message)
         {
             // 'isIndexed' is referred to as 'prefixed' in lua examples.
             DynValue res = env.Call(env.Globals["plugin"], isIndicated, message);
@@ -46,7 +46,23 @@ namespace Snek
             if (res.IsNil())
                 return null;
 
-            return res.CastToString();
+            List<string> output = new List<string>();
+
+            // See if we're a table, and cast out values to strings.
+            if (res.Type == DataType.Table)
+            {
+                foreach(DynValue v in res.Table.Values)
+                {
+                    output.Add(v.CastToString());
+                }
+            }
+            else
+            {
+                // By default, attempt to return whatever we got from the script as a string.
+                output.Add(res.CastToString());
+            }
+
+            return output;
         }
     }
 }

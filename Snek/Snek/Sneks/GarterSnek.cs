@@ -16,6 +16,11 @@ namespace Snek.Sneks
 {
     public class GarterSnek : ISnek
     {
+        public static class MagicValues
+        {
+            public static int MultiMessageDelayMS = 1000;
+        }
+        
         private DiscordSocketClient client;
 
         public string Name { get; private set; }
@@ -144,7 +149,7 @@ namespace Snek.Sneks
             // If indicated, we can act on it as a default C# scale *potentially*, tho it's still
             // valid if not internally defined. The result and what was or wasn't performed based on 
             // this first section determines a lot of the behavior of the lua scales.
-            string result = null;
+            List<string> result = null;
             bool performedInternal = false;
             if (indicated)
             {
@@ -163,7 +168,15 @@ namespace Snek.Sneks
                     if (args.Length - subCommand.Length > 0)
                         subArgs = args.Substring(subCommand.Length + 1).Trim();
 
-                    result = Snek_DoScale(subCommand, subArgs);
+                    List<string> output = new List<string>();
+                    string res = Snek_DoScale(subCommand, subArgs);
+                    
+                    if(res != null)
+                    {
+                        output.Add(res);
+                        result = output;
+                    }
+
                     performedInternal = true;
                 }
             }
@@ -182,10 +195,20 @@ namespace Snek.Sneks
                 }
             }
 
-            // Send a response if we've got one to send.
+            // Send a response if we've got one to send, or if we have multiple queued up we send them with a delay.
             if (result != null)
             {
-                await raw.Channel.SendMessageAsync(result);
+                for (int i = 0; i < result.Count; ++i)
+                {
+                    // Sleep a bit to prevent rate limiting if we recieved a set of responses.
+                    if (i > 0)
+                    {
+                        Thread.Sleep(MagicValues.MultiMessageDelayMS);
+                    }
+
+                    await raw.Channel.SendMessageAsync(result[i]);
+                }
+
                 return;
             }
         }
@@ -204,7 +227,7 @@ namespace Snek.Sneks
                 case "new":
                 case "?":
                     {
-                        string howTo = $"For a list of all commands, use `${indicator}scale`\n\n";
+                        string howTo = $"For a list of all commands, use `{indicator}scale`\n\n";
                         howTo += "To add a new scale, you'll want to make sure you use the `" + indicator + "scale add <name>` command.\n";
                         howTo += "Here's some boilerplate for adding a new scale that you can copy and paste!\n\n";
                         howTo += "`" + indicator + "scale add Poke`\n";
@@ -396,13 +419,13 @@ namespace Snek.Sneks
                 default:
                     {
                         string commandList = "";
-                        commandList += $"- Get detialed examples with `${indicator}scale help`\n";
-                        commandList += $"- To look at my scales, try `${indicator}scale list`\n";
-                        commandList += $"- To add a scale, try `${indicator}scale add <scale name> <lua>`\n";
-                        commandList += $"- To remove a scale, try `${indicator}scale add <scale name>`\n";
-                        commandList += $"- To update a scale, try `${indicator}scale update <scale name> <lua>`\n";
-                        commandList += $"- To view a scale, try `${indicator}scale type <scale name>`\n";
-                        commandList += $"- You can stop me with `${indicator}scale shutdown`\n";
+                        commandList += $"- Get detialed examples with `{indicator}scale help`\n";
+                        commandList += $"- To look at my scales, try `{indicator}scale list`\n";
+                        commandList += $"- To add a scale, try `{indicator}scale add <scale name> <lua>`\n";
+                        commandList += $"- To remove a scale, try `{indicator}scale add <scale name>`\n";
+                        commandList += $"- To update a scale, try `{indicator}scale update <scale name> <lua>`\n";
+                        commandList += $"- To view a scale, try `{indicator}scale type <scale name>`\n";
+                        commandList += $"- You can stop me with `{indicator}scale shutdown`\n";
 
                         return commandList;
                     }
