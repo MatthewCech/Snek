@@ -102,6 +102,7 @@ namespace Snek.Utils
         // Gets the value of the specific key from the INI file. Returns 'null' if key or file isn't found.
         public string ReadItem(string key)
         {
+            key = key.ToLowerInvariant();
             List<KeyValuePair<string, string>> snap = Snapshot();
 
             if (snap != null)

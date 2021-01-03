@@ -16,11 +16,6 @@ namespace Snek.Sneks
 {
     public class GarterSnek : ISnek
     {
-        public static class MagicValues
-        {
-            public static int MultiMessageDelayMS = 1000;
-        }
-        
         private DiscordSocketClient client;
 
         public string Name { get; private set; }
@@ -28,6 +23,7 @@ namespace Snek.Sneks
         private string token;
         private string indicator;
         private string scalesPath;
+        private int MultiMessageDelayMS;
         private List<Scale> scales;
         
         private PseudoINI config;
@@ -47,6 +43,7 @@ namespace Snek.Sneks
             this.token = config.ReadItem("token");
             this.indicator = config.ReadItem("indicator");
             this.scalesPath = config.ReadItem("scalePath");
+            this.MultiMessageDelayMS = int.Parse(config.ReadItem("multiMessageDelayMS"));
 
             Console.WriteLine($"Path for scales: {scalesPath}");
             
@@ -203,7 +200,7 @@ namespace Snek.Sneks
                     // Sleep a bit to prevent rate limiting if we recieved a set of responses.
                     if (i > 0)
                     {
-                        Thread.Sleep(MagicValues.MultiMessageDelayMS);
+                        Thread.Sleep(MultiMessageDelayMS);
                     }
 
                     await raw.Channel.SendMessageAsync(result[i]);
